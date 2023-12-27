@@ -4,6 +4,7 @@ import { User } from "./../models/UserModel.js";
 import { uploadOncload } from "../utils/Cloudnay.js";
 import { ApiResponse } from "../utils/APIResponse.js";
 import Jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 
 const genrateAccessAndRefreshTokens = async (userId) => {
   try {
@@ -324,4 +325,51 @@ return res
 new ApiResponse(200,channel[0],"User channel fetched successfully")
 
 )
+})
+
+export const getWatchHistory=asyncHandler(async(req,res)=>{
+  const user=await User.aggregate([
+    {
+      $match:{
+        _id:new mongoose.Types.ObjectId(req.user._id)
+      }
+    },{
+      $lookup:{
+        from:"video",
+        localField:"watchHistory",
+        foreignField:"_id",
+        as:"watchHistory",
+        pipeline:[{
+          $lookup:{
+            from:User,
+            localField:"owner",
+            foreignField:"_id",
+            as:"Owner",
+            pipeline:[
+              {$project:{
+                Fullname:1,
+                username:1,
+                avatar:1
+              }}
+            ]
+          }
+        },{
+          $addFields:{
+            owner:{
+              $first:"$Owner "
+            }
+          }
+        }
+      ]
+      }
+    }
+  ])
+  return res
+  .status(200)
+  .json(
+    new ApiResponse(200,
+      user[0].getWatchHistory,
+      "Watch history fetched successfully"
+      )
+  )
 })
