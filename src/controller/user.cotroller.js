@@ -262,3 +262,40 @@ export const updatecoverimage=asyncHandler(async(req,res)=>{
  .status(200)
  .json(new ApiResponse(200,updatecoverImage,"coverImage updated succesfully"))
 })
+export const getUserChannelProfile=asyncHandler(async(req,res)=>{
+const {username}=req.params
+if(!username?.trim()){
+throw new ApiErrors(400,"Username is missing")
+}
+const channel=await User.aggregate([
+  {$match:{
+    username:username?.toLowerCase()
+  }},{
+    $lookup:{
+      from:Subscription,
+      localField:"_id",
+      foreignField:"channel",
+      as:"Subscribers"
+    }
+  },{
+    $lookup:{
+      from:Subscription,
+      localField:"_id",
+      foreignField:"subscriber",
+      as:"SubscribedTo"
+    }
+  },{
+    $addFields:{
+      subscribersCount:{
+        $size:"$Subscribers"
+      },
+      ChannelsSubscribedTocount:{
+        $size:"$SubscribedTo"
+      },
+      isSubscribed:{
+        $cond:{}
+      }
+    }
+  }
+])
+})
